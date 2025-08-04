@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Arus Kas Pribadi (Firestore)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .container {
+            max-width: 1024px;
+            margin: auto;
+            padding: 1.5rem;
+        }
+        .header {
+            background-color: #fff;
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .card {
+            background-color: #fff;
+            padding: 1.5rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .btn-primary {
+            background-color: #10b981;
+            color: #fff;
+        }
+        .btn-primary:hover {
+            background-color: #059669;
+        }
+        .btn-secondary {
+            background-color: #ef4444;
+            color: #fff;
+        }
+        .btn-secondary:hover {
+            background-color: #dc2626;
+        }
+        .input-field {
+            width: 100%;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+        .input-field:focus {
+            outline: none;
+            border-color: #10b981;
+        }
+        .table-header {
+            background-color: #f9fafb;
+        }
+        .table-row-income {
+            background-color: #d1fae5; /* Green for income */
+        }
+        .table-row-expense {
+            background-color: #fee2e2; /* Red for expense */
+        }
+    </style>
+</head>
+<body class="p-6">
+    <div class="container">
+        <!-- Header Section -->
+        <header class="header mb-6 text-center">
+            <h1 class="text-3xl font-bold text-gray-800">Aplikasi Arus Kas Pribadi</h1>
+            <p class="text-gray-600 mt-2">Lacak pemasukan dan pengeluaran harian Anda</p>
+            <p class="text-xs text-gray-400 mt-2">ID Pengguna: <span id="user-id">Memuat...</span></p>
+        </header>
+
+        <!-- Main Content Grid -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Input Form Section -->
+            <section class="card lg:col-span-1">
+                <h2 class="text-xl font-semibold mb-4">Tambah Transaksi Baru</h2>
+                <form id="transaction-form" class="space-y-4">
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
+                        <input type="date" id="date" required class="input-field">
+                    </div>
+                    <div>
+                        <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
+                        <input type="text" id="description" placeholder="Contoh: Beli kopi" required class="input-field">
+                    </div>
+                    <div>
+                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
+                        <select id="category" required class="input-field">
+                            <option value="Penghasilan">Penghasilan</option>
+                            <option value="Makanan & Minuman">Makanan & Minuman</option>
+                            <option value="Transportasi">Transportasi</option>
+                            <option value="Tagihan">Tagihan</option>
+                            <option value="Belanja">Belanja</option>
+                            <option value="Hiburan">Hiburan</option>
+                            <option value="Lain-lain">Lain-lain</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
+                        <select id="type" required class="input-field">
+                            <option value="income">Pemasukan</option>
+                            <option value="expense">Pengeluaran</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
+                        <input type="number" id="amount" placeholder="Contoh: 50000" required class="input-field">
+                    </div>
+                    <div class="flex gap-4 mt-6">
+                        <button type="submit" class="btn btn-primary flex-1">Tambah</button>
+                        <button type="button" id="clear-btn" class="btn btn-secondary flex-1">Hapus Semua Data</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Summary and Transaction List Section -->
+            <section class="lg:col-span-2 space-y-6">
+                <!-- Monthly Summary -->
+                <div class="card">
+                    <h2 class="text-xl font-semibold mb-4">Ringkasan Bulanan</h2>
+                    <!-- Month/Year Filter -->
+                    <div class="mb-4 flex gap-2">
+                        <label for="month-filter" class="text-sm font-medium text-gray-700 self-center">Filter Bulan:</label>
+                        <input type="month" id="month-filter" class="input-field w-auto">
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
+                        <div class="card p-4 bg-gray-100">
+                            <h3 class="text-sm font-medium text-gray-500 mb-1">Saldo Awal</h3>
+                            <div class="flex items-center justify-center text-xl font-bold text-gray-700">
+                                <span id="starting-balance">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="card p-4 bg-white">
+                            <h3 class="text-sm font-medium text-gray-500 mb-1">Total Pemasukan</h3>
+                            <div class="flex items-center justify-center text-xl font-bold text-green-600">
+                                <span id="total-income">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="card p-4 bg-white">
+                            <h3 class="text-sm font-medium text-gray-500 mb-1">Total Pengeluaran</h3>
+                            <div class="flex items-center justify-center text-xl font-bold text-red-600">
+                                <span id="total-expense">Rp 0</span>
+                            </div>
+                        </div>
+                        <div class="card p-4 bg-gray-100">
+                            <h3 class="text-sm font-medium text-gray-500 mb-1">Saldo Akhir</h3>
+                            <div class="flex items-center justify-center text-xl font-bold text-blue-600">
+                                <span id="final-balance">Rp 0</span>
+                            </div>
+                        </div>
+                    </div>
+                    <h3 class="text-lg font-semibold mt-6 mb-2">Ringkasan Berdasarkan Kategori</h3>
+                    <div id="category-summary" class="space-y-2">
+                        <!-- Category summary will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Transaction List Table -->
+                <div class="card p-0 overflow-hidden">
+                    <h2 class="text-xl font-semibold p-4 border-b">Daftar Transaksi Harian</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left table-auto">
+                            <thead>
+                                <tr class="table-header text-sm text-gray-500 uppercase tracking-wider">
+                                    <th class="p-4">Tanggal</th>
+                                    <th class="p-4">Keterangan</th>
+                                    <th class="p-4">Kategori</th>
+                                    <th class="p-4 text-right">Nominal (Rp)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-list">
+                                <!-- Transactions will be injected here by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, query, onSnapshot, addDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase configuration and initialization
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        let userId = null;
+
+        // Get references to DOM elements
+        const transactionForm = document.getElementById('transaction-form');
+        const transactionList = document.getElementById('transaction-list');
+        const totalIncomeEl = document.getElementById('total-income');
+        const totalExpenseEl = document.getElementById('total-expense');
+        const finalBalanceEl = document.getElementById('final-balance');
+        const startingBalanceEl = document.getElementById('starting-balance');
+        const clearBtn = document.getElementById('clear-btn');
+        const monthFilter = document.getElementById('month-filter');
+        const categorySummaryEl = document.getElementById('category-summary');
+        const userIdEl = document.getElementById('user-id');
+        
+        let transactions = [];
+        let startingBalance = 0;
+
+        // Function to format numbers as currency
+        const formatCurrency = (amount) => {
+            return new Intl.NumberFormat('id-ID', {
+                style: 'currency',
+                currency: 'IDR',
+                minimumFractionDigits: 0
+            }).format(amount);
+        };
+
+        // Function to render transactions and summary
+        const renderTransactions = () => {
+            if (!userId) {
+                console.log("Menunggu otentikasi...");
+                return;
+            }
+
+            transactionList.innerHTML = '';
+            
+            const [filterYear, filterMonth] = monthFilter.value.split('-');
+            const filteredTransactions = transactions.filter(trans => {
+                const transDate = new Date(trans.date);
+                return transDate.getFullYear() == filterYear && (transDate.getMonth() + 1) == filterMonth;
+            });
+            
+            let totalIncome = 0;
+            let totalExpense = 0;
+            const categoryTotals = {};
+
+            const sortedTransactions = filteredTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sortedTransactions.forEach(trans => {
+                const row = document.createElement('tr');
+                row.classList.add('border-t', trans.type === 'income' ? 'table-row-income' : 'table-row-expense');
+                
+                const amountClass = trans.type === 'income' ? 'text-green-600' : 'text-red-600';
+                const formattedAmount = formatCurrency(trans.amount);
+
+                row.innerHTML = `
+                    <td class="p-4 text-sm font-medium">${trans.date}</td>
+                    <td class="p-4 text-sm">${trans.description}</td>
+                    <td class="p-4 text-sm">${trans.category}</td>
+                    <td class="p-4 text-sm font-semibold text-right ${amountClass}">${formattedAmount}</td>
+                `;
+                transactionList.appendChild(row);
+
+                if (trans.type === 'income') {
+                    totalIncome += trans.amount;
+                } else {
+                    totalExpense += trans.amount;
+                }
+                
+                if (!categoryTotals[trans.category]) {
+                    categoryTotals[trans.category] = { income: 0, expense: 0 };
+                }
+                categoryTotals[trans.category][trans.type] += trans.amount;
+            });
+
+            const finalBalance = startingBalance + totalIncome - totalExpense;
+            startingBalanceEl.textContent = formatCurrency(startingBalance);
+            totalIncomeEl.textContent = formatCurrency(totalIncome);
+            totalExpenseEl.textContent = formatCurrency(totalExpense);
+            finalBalanceEl.textContent = formatCurrency(finalBalance);
+            finalBalanceEl.style.color = finalBalance >= 0 ? '#22c55e' : '#ef4444';
+            
+            renderCategorySummary(categoryTotals);
+        };
+
+        // Function to render category summary
+        const renderCategorySummary = (categoryTotals) => {
+            categorySummaryEl.innerHTML = '';
+            
+            const sortedCategories = Object.keys(categoryTotals).sort();
+
+            sortedCategories.forEach(category => {
+                const totalIncome = categoryTotals[category].income;
+                const totalExpense = categoryTotals[category].expense;
+                
+                const categoryDiv = document.createElement('div');
+                categoryDiv.classList.add('flex', 'justify-between', 'text-sm');
+                
+                let summaryText = `<span class="font-medium">${category}:</span>`;
+                if (totalIncome > 0) {
+                    summaryText += `<span class="text-green-600 ml-2"> +${formatCurrency(totalIncome)}</span>`;
+                }
+                if (totalExpense > 0) {
+                    summaryText += `<span class="text-red-600 ml-2"> -${formatCurrency(totalExpense)}</span>`;
+                }
+
+                categoryDiv.innerHTML = summaryText;
+                categorySummaryEl.appendChild(categoryDiv);
+            });
+        };
+
+        // Function to add a new transaction to Firestore
+        const addTransaction = async (e) => {
+            e.preventDefault();
+            
+            const date = document.getElementById('date').value;
+            const description = document.getElementById('description').value;
+            const category = document.getElementById('category').value;
+            const type = document.getElementById('type').value;
+            const amount = parseFloat(document.getElementById('amount').value);
+
+            if (!date || !description || !category || isNaN(amount) || amount <= 0) {
+                // Using a simple custom message for validation
+                document.querySelector('.message-box').innerHTML = '<p class="text-red-500">Mohon isi semua data dengan benar.</p>';
+                return;
+            }
+
+            try {
+                await addDoc(collection(db, 'artifacts', appId, 'users', userId, 'transactions'), {
+                    date,
+                    description,
+                    category,
+                    type,
+                    amount
+                });
+                e.target.reset();
+            } catch (e) {
+                console.error("Error adding document: ", e);
+            }
+        };
+
+        // Function to clear all data from Firestore
+        const clearData = async () => {
+            if (confirm('Apakah Anda yakin ingin menghapus semua data transaksi dan saldo awal?')) {
+                try {
+                    // Delete all transactions
+                    const q = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                    const querySnapshot = await getDocs(q);
+                    querySnapshot.forEach(async (doc) => {
+                        await deleteDoc(doc.ref);
+                    });
+                    
+                    // Reset starting balance
+                    const balanceDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'balance');
+                    await setDoc(balanceDocRef, { value: 0 });
+
+                } catch (e) {
+                    console.error("Error removing documents: ", e);
+                }
+            }
+        };
+        
+        // Function to set the starting balance in Firestore
+        const setStartingBalance = async () => {
+            const newBalance = prompt('Masukkan saldo awal Anda:', startingBalance);
+            if (newBalance !== null) {
+                const parsedBalance = parseFloat(newBalance);
+                if (!isNaN(parsedBalance)) {
+                    try {
+                        const balanceDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'balance');
+                        await setDoc(balanceDocRef, { value: parsedBalance });
+                    } catch (e) {
+                        console.error("Error updating starting balance: ", e);
+                    }
+                } else {
+                    // Using a simple custom message for validation
+                    document.querySelector('.message-box').innerHTML = '<p class="text-red-500">Input tidak valid. Mohon masukkan angka.</p>';
+                }
+            }
+        };
+
+        // Main logic to initialize Firebase and set up listeners
+        const initApp = () => {
+            onAuthStateChanged(auth, (user) => {
+                if (user) {
+                    userId = user.uid;
+                    userIdEl.textContent = userId;
+
+                    // Set up listener for starting balance
+                    const balanceDocRef = doc(db, 'artifacts', appId, 'users', userId, 'settings', 'balance');
+                    onSnapshot(balanceDocRef, (docSnap) => {
+                        if (docSnap.exists()) {
+                            startingBalance = docSnap.data().value;
+                        } else {
+                            startingBalance = 0;
+                            setDoc(balanceDocRef, { value: 0 });
+                        }
+                        renderTransactions();
+                    });
+
+                    // Set up listener for transactions
+                    const q = collection(db, 'artifacts', appId, 'users', userId, 'transactions');
+                    onSnapshot(q, (querySnapshot) => {
+                        transactions = [];
+                        querySnapshot.forEach((doc) => {
+                            transactions.push(doc.data());
+                        });
+                        renderTransactions();
+                    });
+                    
+                } else {
+                    console.log("Pengguna tidak terautentikasi. Mencoba masuk secara anonim.");
+                }
+            });
+
+            // Handle authentication token
+            const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+            if (initialAuthToken) {
+                 signInWithCustomToken(auth, initialAuthToken).catch((error) => {
+                     console.error("Error signing in with custom token:", error);
+  
