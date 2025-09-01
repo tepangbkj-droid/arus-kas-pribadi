@@ -48,6 +48,10 @@
                     Minuman
                 </button>
             </div>
+            
+            <div class="mb-4">
+                <input type="text" id="search-input" class="w-full p-3 rounded-lg text-gray-800 border border-gray-300" placeholder="Cari menu...">
+            </div>
 
             <div class="flex-1 overflow-y-auto mb-6">
                 <div id="menu-items" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
@@ -214,6 +218,19 @@
             <button onclick="closeQRISModal()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Tutup</button>
         </div>
     </div>
+    
+    <div id="variant-modal-overlay" class="modal-overlay hidden">
+        <div id="variant-modal-content" class="modal-content text-left">
+            <h2 id="variant-modal-title" class="text-xl font-bold text-gray-800 mb-4">Pilih Varian</h2>
+            <div id="variant-options" class="flex flex-col space-y-2 mb-4">
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button id="btn-batal-variant" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Batal</button>
+                <button id="btn-tambah-variant" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Tambahkan ke Keranjang</button>
+            </div>
+        </div>
+    </div>
+
 
     
     <script type="module">
@@ -250,6 +267,7 @@
         
         // DOM Elements
         const menuItemsEl = document.getElementById('menu-items');
+        const searchInputEl = document.getElementById('search-input');
         const cartItemsEl = document.getElementById('cart-items');
         const cartTotalEl = document.getElementById('cart-total');
         const inputBayarEl = document.getElementById('input-bayar');
@@ -304,6 +322,13 @@
         const btnBatalEditTxEl = document.getElementById('btn-batal-edit-tx');
         const btnSimpanEditTxEl = document.getElementById('btn-simpan-edit-tx');
 
+        // Variant Modal elements
+        const variantModalOverlay = document.getElementById('variant-modal-overlay');
+        const variantModalTitle = document.getElementById('variant-modal-title');
+        const variantOptionsEl = document.getElementById('variant-options');
+        const btnBatalVariantEl = document.getElementById('btn-batal-variant');
+        const btnTambahVariantEl = document.getElementById('btn-tambah-variant');
+        let selectedItemForVariant = null;
 
         // Event Listeners
         document.addEventListener('DOMContentLoaded', initialize);
@@ -345,6 +370,8 @@
                 }
             });
         });
+
+        searchInputEl.addEventListener('input', renderMenuItems);
 
         paymentMethodEl.addEventListener('change', (e) => {
             if (e.target.value === 'cash') {
@@ -501,6 +528,26 @@
                 showMessage("Gagal memperbarui transaksi. Pastikan format JSON benar.", true);
             }
         });
+        
+        btnBatalVariantEl.addEventListener('click', () => {
+            variantModalOverlay.classList.add('hidden');
+            selectedItemForVariant = null;
+        });
+
+        btnTambahVariantEl.addEventListener('click', () => {
+            const selectedVariantEl = document.querySelector('input[name="variant"]:checked');
+            if (selectedVariantEl && selectedItemForVariant) {
+                const variantName = selectedVariantEl.value;
+                const variant = selectedItemForVariant.variants.find(v => v.name === variantName);
+                if (variant) {
+                    tambahKeKeranjang(selectedItemForVariant.name, variant.price, variant.name);
+                    variantModalOverlay.classList.add('hidden');
+                    selectedItemForVariant = null;
+                }
+            } else {
+                showMessage("Silakan pilih varian terlebih dahulu.");
+            }
+        });
 
         window.openQRISModal = function() {
             const total = parseInt(cartTotalEl.textContent.replace('Rp ', '').replace(/\./g, ''));
@@ -616,23 +663,51 @@
 
         function renderMenuItems() {
             menuItemsEl.innerHTML = '';
-            const currentMenu = editableMenuItems.filter(item => item.category === activeCategory);
+            const searchQuery = searchInputEl.value.toLowerCase();
+            const filteredMenu = editableMenuItems.filter(item => 
+                item.category === activeCategory &&
+                (item.name.toLowerCase().includes(searchQuery) || 
+                 (item.variants && item.variants.some(v => v.name.toLowerCase().includes(searchQuery))))
+            );
             
-            if (currentMenu.length === 0) {
+            if (filteredMenu.length === 0) {
                 menuItemsEl.innerHTML = `<p class="text-gray-500 col-span-full text-center py-8">Menu di kategori ini masih kosong.</p>`;
                 return;
             }
             
-            currentMenu.forEach(item => {
+            filteredMenu.forEach(item => {
                 const card = document.createElement('div');
                 card.className = "bg-white p-4 rounded-lg shadow cursor-pointer transform hover:scale-105 transition-transform duration-200 text-center";
+                let displayPrice = item.price ? `Rp ${item.price.toLocaleString('id-ID')}` : 'Pilih Varian';
                 card.innerHTML = `
                     <p class="font-semibold text-gray-800">${item.name}</p>
-                    <p class="text-sm text-gray-500">Rp ${item.price.toLocaleString('id-ID')}</p>
+                    <p class="text-sm text-gray-500">${displayPrice}</p>
                 `;
-                card.addEventListener('click', () => tambahKeKeranjang(item.name, item.price));
+                card.addEventListener('click', () => {
+                    if (item.variants) {
+                        openVariantModal(item);
+                    } else {
+                        tambahKeKeranjang(item.name, item.price);
+                    }
+                });
                 menuItemsEl.appendChild(card);
             });
+        }
+
+        function openVariantModal(item) {
+            selectedItemForVariant = item;
+            variantModalTitle.textContent = `Pilih Varian untuk ${item.name}`;
+            variantOptionsEl.innerHTML = '';
+            item.variants.forEach(variant => {
+                const radioHtml = `
+                    <label class="flex items-center space-x-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-100">
+                        <input type="radio" name="variant" value="${variant.name}" class="form-radio text-indigo-600">
+                        <span class="text-gray-800">${variant.name} - Rp ${variant.price.toLocaleString('id-ID')}</span>
+                    </label>
+                `;
+                variantOptionsEl.innerHTML += radioHtml;
+            });
+            variantModalOverlay.classList.remove('hidden');
         }
 
         function renderManageableMenu() {
@@ -679,11 +754,12 @@
         }
 
 
-        window.tambahKeKeranjang = function(item, price) {
-            if (cart[item]) {
-                cart[item].jumlah += 1;
+        window.tambahKeKeranjang = function(item, price, variant = null) {
+            const cartKey = variant ? `${item} (${variant})` : item;
+            if (cart[cartKey]) {
+                cart[cartKey].jumlah += 1;
             } else {
-                cart[item] = { harga: price, jumlah: 1 };
+                cart[cartKey] = { harga: price, jumlah: 1 };
             }
             renderCart();
         }
@@ -784,7 +860,6 @@
             qrisPaymentFormEl.classList.add('hidden');
         }
 
-        
         function renderTransactionHistory() {
             riwayatTabContentEl.innerHTML = '';
             if (transactions.length === 0) {
