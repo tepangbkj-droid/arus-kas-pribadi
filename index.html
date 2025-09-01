@@ -3,505 +3,872 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Arus Kas Bersama</title>
+    <title>Mesin Kasir Sederhana</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-        body { font-family: 'Inter', sans-serif; background-color: #f3f4f6; color: #1f2937; }
-        .container { max-width: 1024px; margin: auto; padding: 1rem; }
-        .card { background-color: #fff; padding: 1.5rem; border-radius: 1rem; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06); }
-        .btn { padding: 0.75rem 1.5rem; border-radius: 0.5rem; font-weight: 600; transition: all 0.2s ease-in-out; box-shadow: 0 2px 4px rgba(0,0,0,0.1); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-primary { background-color: #10b981; color: #fff; }
-        .btn-primary:hover:not(:disabled) { background-color: #059669; }
-        .btn-danger { background-color: #ef4444; color: #fff; }
-        .btn-danger:hover:not(:disabled) { background-color: #dc2626; }
-        .btn-secondary { background-color: #e5e7eb; color: #374151; }
-        .btn-secondary:hover:not(:disabled) { background-color: #d1d5db; }
-        .input-field { width: 100%; padding: 0.75rem; border-radius: 0.5rem; border: 1px solid #d1d5db; transition: border-color 0.2s; }
-        .input-field:focus { outline: none; border-color: #10b981; box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2); }
-        .modal-backdrop { position: fixed; inset: 0; background-color: rgba(0, 0, 0, 0.5); z-index: 40; }
-        .modal { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background-color: white; border-radius: 0.75rem; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05); padding: 1.5rem; width: 90%; max-width: 28rem; z-index: 50; }
-        .message-box { position: fixed; bottom: 1.25rem; right: 1.25rem; z-index: 50; display: flex; flex-direction: column; gap: 0.5rem; }
-        .message-toast { padding: 1rem; border-radius: 0.5rem; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); opacity: 0; transform: translateX(100%); animation: slideIn 0.5s forwards; }
-        @keyframes slideIn { to { opacity: 1; transform: translateX(0); } }
-        .hidden { display: none; }
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for modals */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
     </style>
 </head>
-<body class="p-2 sm:p-6">
-    <div id="mode-selection-container">
-        <div class="modal-backdrop"></div>
-        <div class="modal">
-            <h3 class="text-xl font-bold mb-4 text-center">Pilih Mode Penggunaan</h3>
-            <p class="text-gray-600 mb-6 text-center">Pilih bagaimana Anda ingin menggunakan aplikasi ini.</p>
-            <div class="space-y-4">
-                <button id="select-anonymous-btn" class="btn btn-primary w-full text-lg py-3">Mode Anonim Bersama (Hanya Lihat)</button>
-                <div class="text-center my-2 text-sm text-gray-400">ATAU</div>
-                <div class="card p-4 bg-gray-50">
-                    <h4 class="font-semibold text-center mb-3">Mode Keuangan Pasangan</h4>
-                    <div class="space-y-3">
-                        <input type="text" id="couple-id-input" placeholder="Masukkan ID Pasangan Anda" class="input-field text-center">
-                        <button id="join-couple-btn" class="btn btn-secondary w-full">Gabung</button>
-                        <button id="create-couple-btn" class="btn btn-primary w-full">Buat Ruang Baru</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="app-container" class="hidden">
-        <div class="container">
-            <header class="header mb-6 text-center">
-                <div class="flex justify-end mb-2">
-                    <button id="switch-mode-btn" class="btn btn-secondary btn-sm py-1 px-2 text-xs">Ganti Mode</button>
-                </div>
-                <h1 class="text-3xl font-bold text-gray-800">Aplikasi Arus Kas Bersama</h1>
-                <p class="text-gray-600 mt-2">Mode Aktif: <span id="active-mode-display" class="font-semibold"></span></p>
-                <p class="text-xs text-gray-400 mt-2 break-all">ID Sesi Bersama: <span id="session-id">Memuat...</span></p>
-            </header>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 md:p-8">
+    <div class="bg-white rounded-xl shadow-lg w-full max-w-5xl flex flex-col md:flex-row h-auto min-h-[80vh] overflow-hidden">
+        
+        <div class="w-full md:w-2/3 p-6 flex flex-col">
+            <h1 class="text-3xl font-bold mb-6 text-gray-800">Mesin Kasir</h1>
             
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <section id="form-section" class="card lg:col-span-1">
-                    <h2 class="text-xl font-semibold mb-4">Tambah Transaksi Baru</h2>
-                    <form id="transaction-form" class="space-y-4">
-                        <fieldset id="form-fieldset" disabled>
-                            <div>
-                                <label for="date" class="block text-sm font-medium text-gray-700 mb-1">Tanggal</label>
-                                <input type="date" id="date" required class="input-field">
-                            </div>
-                            <div>
-                                <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Keterangan</label>
-                                <input type="text" id="description" placeholder="Contoh: Beli kopi" required class="input-field">
-                            </div>
-                            <div>
-                                <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Kategori</label>
-                                <select id="category" required class="input-field">
-                                    <option value="Penghasilan">Penghasilan</option>
-                                    <option value="Makanan & Minuman">Makanan & Minuman</option>
-                                    <option value="Transportasi">Transportasi</option>
-                                    <option value="Tagihan">Tagihan</option>
-                                    <option value="Belanja">Belanja</option>
-                                    <option value="Hiburan">Hiburan</option>
-                                    <option value="Lain-lain">Lain-lain</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="type" class="block text-sm font-medium text-gray-700 mb-1">Jenis</label>
-                                <select id="type" required class="input-field">
-                                    <option value="income">Pemasukan</option>
-                                    <option value="expense">Pengeluaran</option>
-                                </select>
-                            </div>
-                            <div>
-                                <label for="amount" class="block text-sm font-medium text-gray-700 mb-1">Nominal (Rp)</label>
-                                <input type="number" id="amount" placeholder="Contoh: 50000" required class="input-field">
-                            </div>
-                            <div class="flex gap-4 mt-6">
-                                <button type="submit" class="btn btn-primary flex-1">Tambah</button>
-                                <button type="button" id="clear-btn" class="btn btn-danger flex-1">Hapus Semua Data</button>
-                            </div>
-                        </fieldset>
-                    </form>
-                </section>
-                <section id="display-section" class="lg:col-span-2 space-y-6">
-                    <div class="card">
-                        <h2 class="text-xl font-semibold mb-4">Ringkasan Bulanan</h2>
-                        <div class="mb-4 flex gap-2 items-center">
-                            <label for="month-filter" class="text-sm font-medium text-gray-700 self-center">Filter Bulan:</label>
-                            <input type="month" id="month-filter" class="input-field w-auto">
-                        </div>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 text-center">
-                            <div class="card p-4 bg-gray-50">
-                                <div class="flex justify-between items-center mb-1">
-                                    <h3 class="text-sm font-medium text-gray-500">Saldo Awal</h3>
-                                    <button id="edit-starting-balance-btn" title="Ubah Saldo Awal" class="text-blue-500 hover:text-blue-700 disabled:opacity-50">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.5L15.232 5.232z" /></svg>
-                                    </button>
-                                </div>
-                                <div class="text-xl font-bold text-gray-700"><span id="starting-balance">Rp 0</span></div>
-                            </div>
-                            <div class="card p-4 bg-white"><h3 class="text-sm font-medium text-gray-500 mb-1">Total Pemasukan</h3><div class="text-xl font-bold text-green-600"><span id="total-income">Rp 0</span></div></div>
-                            <div class="card p-4 bg-white"><h3 class="text-sm font-medium text-gray-500 mb-1">Total Pengeluaran</h3><div class="text-xl font-bold text-red-600"><span id="total-expense">Rp 0</span></div></div>
-                            <div class="card p-4 bg-gray-50"><h3 class="text-sm font-medium text-gray-500 mb-1">Saldo Akhir</h3><div class="text-xl font-bold text-blue-600"><span id="final-balance">Rp 0</span></div></div>
-                        </div>
-                        <h3 class="text-lg font-semibold mt-6 mb-2">Ringkasan Kategori</h3>
-                        <div id="category-summary" class="space-y-2 text-sm"></div>
-                    </div>
-                    <div class="card p-0 overflow-hidden">
-                        <h2 class="text-xl font-semibold p-4 border-b">Daftar Transaksi</h2>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-left table-auto">
-                                <thead><tr class="bg-gray-50 text-sm text-gray-500 uppercase tracking-wider"><th class="p-4">Tanggal</th><th class="p-4">Keterangan</th><th class="p-4">Kategori</th><th class="p-4 text-right">Nominal (Rp)</th><th id="action-header" class="p-4 text-center">Aksi</th></tr></thead>
-                                <tbody id="transaction-list"></tbody>
-                            </table>
-                        </div>
-                        <div id="pagination-controls" class="p-4 flex justify-between items-center text-sm border-t">
-                            <button id="prev-page-btn" class="btn btn-secondary">Sebelumnya</button>
-                            <span id="page-info" class="font-medium"></span>
-                            <button id="next-page-btn" class="btn btn-secondary">Berikutnya</button>
-                        </div>
-                    </div>
-                </section>
+            <div class="flex border-b border-gray-200 mb-4">
+                <button id="tab-makanan" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-indigo-600 focus:outline-none transition-colors duration-200" data-category="makanan">
+                    Makanan
+                </button>
+                <button id="tab-minuman" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-gray-500 hover:text-indigo-600 hover:border-indigo-600 focus:outline-none transition-colors duration-200" data-category="minuman">
+                    Minuman
+                </button>
             </div>
-        </div>
-    </div>
-    
-    <div id="modal-container" class="hidden">
-        <div class="modal-backdrop"></div>
-        <div class="modal">
-            <h3 id="modal-title" class="text-lg font-bold mb-4"></h3>
-            <div id="modal-body" class="text-gray-600"></div>
-            <div id="modal-footer" class="mt-6 flex justify-end gap-3">
-                <button id="modal-cancel-btn" class="btn btn-secondary">Batal</button>
-                <button id="modal-confirm-btn" class="btn btn-primary">Konfirmasi</button>
-            </div>
-        </div>
-    </div>
-    <div id="message-box" class="message-box"></div>
 
+            <div class="flex-1 overflow-y-auto mb-6">
+                <div id="menu-items" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+                    </div>
+            </div>
+
+            <div class="bg-gray-50 rounded-lg p-4">
+                <h2 class="text-xl font-semibold mb-2 text-gray-700">Keranjang Belanja</h2>
+                <div id="cart-items" class="overflow-y-auto max-h-40 mb-2">
+                    </div>
+                <div class="flex justify-between items-center font-semibold text-gray-800">
+                    <span>Total:</span>
+                    <span id="cart-total">Rp 0</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="w-full md:w-1/3 bg-indigo-600 p-6 flex flex-col justify-between rounded-b-xl md:rounded-r-xl md:rounded-b-none text-white">
+            
+            <div class="flex border-b border-indigo-400 mb-4 overflow-x-auto whitespace-nowrap">
+                <button id="tab-kasir" class="py-2 px-4 text-center font-medium border-b-2 border-white text-white focus:outline-none transition-colors duration-200" data-tab="kasir">
+                    Kasir
+                </button>
+                <button id="tab-riwayat" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-indigo-200 hover:text-white hover:border-white focus:outline-none transition-colors duration-200" data-tab="riwayat">
+                    Riwayat
+                </button>
+                <button id="tab-laporan" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-indigo-200 hover:text-white hover:border-white focus:outline-none transition-colors duration-200" data-tab="laporan">
+                    Laporan
+                </button>
+                <button id="tab-manajemen" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-indigo-200 hover:text-white hover:border-white focus:outline-none transition-colors duration-200" data-tab="manajemen">
+                    Manajemen
+                </button>
+                <button id="tab-catatan" class="py-2 px-4 text-center font-medium border-b-2 border-transparent text-indigo-200 hover:text-white hover:border-white focus:outline-none transition-colors duration-200" data-tab="catatan">
+                    Catatan
+                </button>
+            </div>
+            
+            <div id="kasir-tab-content" class="tab-content flex-1 flex flex-col justify-center">
+                <div id="payment-options" class="w-full">
+                    <label for="payment-method" class="text-sm font-semibold mb-2 block">Pilih Metode Pembayaran</label>
+                    <select id="payment-method" class="w-full p-3 rounded-lg text-gray-800 mb-4">
+                        <option value="cash">Tunai</option>
+                        <option value="qris">QRIS</option>
+                    </select>
+                </div>
+                
+                <div id="cash-payment-form">
+                    <label for="input-bayar" class="text-sm font-semibold mb-2 block">Nominal Tunai</label>
+                    <input type="number" id="input-bayar" class="w-full p-3 rounded-lg text-gray-800 mb-4" placeholder="Masukkan jumlah uang">
+                </div>
+
+                <div id="qris-payment-form" class="hidden">
+                    <p class="text-center font-semibold mb-2">Scan QR code di bawah ini</p>
+                    <div class="bg-white p-4 rounded-lg flex justify-center items-center">
+                        <img id="qris-image" src="" alt="Kode QRIS" class="w-48 h-48 cursor-pointer" onclick="openQRISModal()">
+                    </div>
+                </div>
+
+                <div id="form-bayar" class="w-full">
+                    <button id="btn-bayar" class="w-full bg-white text-indigo-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition-colors duration-200">
+                        Proses Pembayaran
+                    </button>
+                </div>
+
+                <div id="kembalian-info" class="text-center mt-4 hidden">
+                    <p class="text-2xl font-bold">Kembalian</p>
+                    <p id="kembalian-amount" class="text-4xl font-extrabold mt-2 text-white"></p>
+                    <button id="btn-transaksi-baru" class="w-full mt-4 bg-white text-indigo-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition-colors duration-200">
+                        Transaksi Baru
+                    </button>
+                </div>
+            </div>
+
+            <div id="riwayat-tab-content" class="tab-content flex-1 hidden overflow-y-auto">
+                </div>
+
+            <div id="laporan-tab-content" class="tab-content flex-1 hidden flex flex-col">
+                <h2 class="text-xl font-semibold mb-4">Tambahkan Pengeluaran</h2>
+                <input type="text" id="expense-name" class="w-full p-3 rounded-lg text-gray-800 mb-2" placeholder="Nama Pengeluaran">
+                <input type="number" id="expense-amount" class="w-full p-3 rounded-lg text-gray-800 mb-4" placeholder="Jumlah Pengeluaran">
+                <button id="btn-tambah-pengeluaran" class="w-full bg-white text-indigo-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition-colors duration-200 mb-4">
+                    Tambahkan Pengeluaran
+                </button>
+
+                <h2 class="text-xl font-semibold mb-2 mt-4">Ringkasan Pengeluaran</h2>
+                <div id="laporan-list" class="flex-1 overflow-y-auto">
+                    </div>
+            </div>
+
+            <div id="manajemen-tab-content" class="tab-content flex-1 hidden flex flex-col">
+                <h2 class="text-xl font-semibold mb-4">Tambah Menu Baru</h2>
+                <select id="new-item-category" class="w-full p-3 rounded-lg text-gray-800 mb-2">
+                    <option value="makanan">Makanan</option>
+                    <option value="minuman">Minuman</option>
+                </select>
+                <input type="text" id="new-item-name" class="w-full p-3 rounded-lg text-gray-800 mb-2" placeholder="Nama Menu">
+                <input type="number" id="new-item-price" class="w-full p-3 rounded-lg text-gray-800 mb-4" placeholder="Harga (contoh: 15000)">
+                <button id="btn-tambah-menu" class="w-full bg-white text-indigo-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition-colors duration-200 mb-4">
+                    Tambah Menu
+                </button>
+                <h2 class="text-xl font-semibold mb-2 mt-4">Edit/Hapus Menu</h2>
+                <div id="manajemen-menu-list" class="flex-1 overflow-y-auto">
+                    </div>
+            </div>
+
+            <div id="catatan-tab-content" class="tab-content flex-1 hidden flex flex-col">
+                <h2 class="text-xl font-semibold mb-4">Tambahkan Catatan Baru</h2>
+                <textarea id="note-text" class="w-full p-3 rounded-lg text-gray-800 mb-4" rows="4" placeholder="Tulis catatan Anda di sini..."></textarea>
+                <button id="btn-tambah-catatan" class="w-full bg-white text-indigo-600 py-3 rounded-lg font-bold hover:bg-gray-200 transition-colors duration-200 mb-4">
+                    Simpan Catatan
+                </button>
+                <h2 class="text-xl font-semibold mb-2 mt-4">Daftar Catatan</h2>
+                <div id="notes-list" class="flex-1 overflow-y-auto">
+                    </div>
+            </div>
+            
+            <div class="text-center mt-4">
+                <p id="auth-status" class="text-sm text-indigo-200"></p>
+            </div>
+        </div>
+    </div>
+
+    <div id="message-modal-overlay" class="modal-overlay hidden">
+        <div id="message-modal-content" class="modal-content">
+            <p id="message-text" class="text-gray-800"></p>
+            <button id="message-modal-close" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Tutup</button>
+        </div>
+    </div>
+
+    <div id="edit-modal-overlay" class="modal-overlay hidden">
+        <div id="edit-modal-content" class="modal-content">
+            <h2 class="text-xl font-bold mb-4">Edit Menu</h2>
+            <input type="text" id="edit-item-name" class="w-full p-3 rounded-lg text-gray-800 mb-2" placeholder="Nama Menu">
+            <input type="number" id="edit-item-price" class="w-full p-3 rounded-lg text-gray-800 mb-4" placeholder="Harga (contoh: 15000)">
+            <div class="flex space-x-2">
+                <button id="btn-batal-edit" class="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Batal</button>
+                <button id="btn-simpan-edit" class="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Simpan Perubahan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="edit-transaction-modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content text-left">
+            <h2 class="text-xl font-bold mb-4 text-gray-800">Edit Transaksi</h2>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Total Transaksi</label>
+                <input type="number" id="edit-tx-total" class="w-full p-3 rounded-lg text-gray-800" placeholder="Total Transaksi">
+            </div>
+            <div class="mb-4">
+                <label class="block text-sm font-semibold text-gray-700 mb-1">Pesanan (format JSON string)</label>
+                <textarea id="edit-tx-pesanan" rows="5" class="w-full p-3 rounded-lg text-gray-800" placeholder='{"Item 1": {"harga": 10000, "jumlah": 1}}'></textarea>
+                <p class="text-xs text-gray-500 mt-1">Gunakan format JSON string untuk detail pesanan.</p>
+            </div>
+            <div class="flex justify-end space-x-2">
+                <button id="btn-batal-edit-tx" class="px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400">Batal</button>
+                <button id="btn-simpan-edit-tx" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Simpan</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="qris-modal-overlay" class="modal-overlay hidden">
+        <div class="modal-content">
+            <img id="enlarged-qris-image" src="" alt="QRIS" class="w-full max-w-sm mx-auto">
+            <button onclick="closeQRISModal()" class="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">Tutup</button>
+        </div>
+    </div>
+
+    
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDocs, addDoc, setDoc, onSnapshot, collection, query, writeBatch, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, onSnapshot, doc, setDoc, updateDoc, deleteDoc, serverTimestamp, query, where, getDocs, addDoc } from     "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        // Firebase Configuration - GANTI DENGAN KREDENSIAL PROYEK ANDA
+        const firebaseConfig = {
+            apiKey: "AIzaSyDxoOHCPBXZ5LFmOTBD0uHYsTh5lReJyuA",
+            authDomain: "kasir-sederhana-e2d47.firebaseapp.com",
+            projectId: "kasir-sederhana-e2d47",
+            storageBucket: "kasir-sederhana-e2d47.firebasestorage.app",
+            messagingSenderId: "446896042762",
+            appId: "1:446896042762:web:b4fe9da3166a3e806f00f3"
+        };
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // --- DOM References ---
-            const appContainer = document.getElementById('app-container');
-            const modeSelectionContainer = document.getElementById('mode-selection-container');
-            const sessionIdEl = document.getElementById('session-id');
-            const activeModeDisplay = document.getElementById('active-mode-display');
-            const formSection = document.getElementById('form-section');
-            const displaySection = document.getElementById('display-section');
-            const actionHeader = document.getElementById('action-header');
-            const transactionList = document.getElementById('transaction-list');
-            const transactionForm = document.getElementById('transaction-form');
-            const formFieldset = document.getElementById('form-fieldset');
-            const totalIncomeEl = document.getElementById('total-income');
-            const totalExpenseEl = document.getElementById('total-expense');
-            const finalBalanceEl = document.getElementById('final-balance');
-            const startingBalanceEl = document.getElementById('starting-balance');
-            const clearBtn = document.getElementById('clear-btn');
-            const monthFilter = document.getElementById('month-filter');
-            const categorySummaryEl = document.getElementById('category-summary');
-            const editStartingBalanceBtn = document.getElementById('edit-starting-balance-btn');
-            const messageBox = document.getElementById('message-box');
-            const modalContainer = document.getElementById('modal-container');
-            const modalTitle = document.getElementById('modal-title');
-            const modalBody = document.getElementById('modal-body');
-            const modalCancelBtn = document.getElementById('modal-cancel-btn');
-            const modalConfirmBtn = document.getElementById('modal-confirm-btn');
-            const paginationControls = document.getElementById('pagination-controls');
-            const prevPageBtn = document.getElementById('prev-page-btn');
-            const nextPageBtn = document.getElementById('next-page-btn');
-            const pageInfo = document.getElementById('page-info');
-            const switchModeBtn = document.getElementById('switch-mode-btn');
+        let currentUserId = null;
+        let activeCategory = 'makanan';
+        let activeTab = 'kasir';
+        let editableMenuItems = [];
+        let currentEditDocId = null;
+        let currentEditTxDocId = null;
 
-            // --- App State ---
-            let db, auth, sessionId, currentMode;
-            let transactions = [], currentStartingBalance = 0;
-            let unsubscribeBalance, unsubscribeTransactions;
-            let modalConfirmCallback = null;
-            let currentPage = 1;
-            const itemsPerPage = 10;
-            const ANONYMOUS_APP_ID = 'shared-cash-flow-anonymous';
+        let cart = {};
+        let transactions = [];
+        let expenses = [];
+        let notes = [];
+        
+        // DOM Elements
+        const menuItemsEl = document.getElementById('menu-items');
+        const cartItemsEl = document.getElementById('cart-items');
+        const cartTotalEl = document.getElementById('cart-total');
+        const inputBayarEl = document.getElementById('input-bayar');
+        const btnBayarEl = document.getElementById('btn-bayar');
+        const kembalianInfoEl = document.getElementById('kembalian-info');
+        const kembalianAmountEl = document.getElementById('kembalian-amount');
+        const btnTransaksiBaruEl = document.getElementById('btn-transaksi-baru');
+        const authStatusEl = document.getElementById('auth-status');
+        const riwayatTabContentEl = document.getElementById('riwayat-tab-content');
+        const laporanTabContentEl = document.getElementById('laporan-tab-content');
+        const manajemenTabContentEl = document.getElementById('manajemen-tab-content');
+        const catatanTabContentEl = document.getElementById('catatan-tab-content');
+        const manajemenMenuListEl = document.getElementById('manajemen-menu-list');
+        const tabButtons = document.querySelectorAll('.flex.border-b button');
+        const newMenuItemCategoryEl = document.getElementById('new-item-category');
+        const newMenuItemNameEl = document.getElementById('new-item-name');
+        const newMenuItemPriceEl = document.getElementById('new-item-price');
+        const btnTambahMenuEl = document.getElementById('btn-tambah-menu');
+        const expenseNameEl = document.getElementById('expense-name');
+        const expenseAmountEl = document.getElementById('expense-amount');
+        const btnTambahPengeluaranEl = document.getElementById('btn-tambah-pengeluaran');
+        const laporanListEl = document.getElementById('laporan-list');
+        const noteTextEl = document.getElementById('note-text');
+        const btnTambahCatatanEl = document.getElementById('btn-tambah-catatan');
+        const notesListEl = document.getElementById('notes-list');
+        const formBayarEl = document.getElementById('form-bayar');
 
-            // --- Firebase Config ---
-            const firebaseConfig = { apiKey: "AIzaSyCQsm-S_MtdfffH4xh9uBJLztui35ToilY", authDomain: "aruskaspribadi.firebaseapp.com", projectId: "aruskaspribadi" };
-            
-            // --- UI & Utility Functions ---
-            const showMessage = (text, type = 'success', duration = 3000) => {
-                const toast = document.createElement('div');
-                toast.textContent = text;
-                const bgColor = type === 'error' ? 'bg-red-500' : 'bg-green-500';
-                toast.className = `message-toast ${bgColor}`;
-                messageBox.appendChild(toast);
-                setTimeout(() => { toast.remove(); }, duration);
-            };
-            const showModal = (title, bodyContent, confirmText = 'Konfirmasi', onConfirm) => {
-                modalTitle.textContent = title;
-                modalBody.innerHTML = '';
-                if (typeof bodyContent === 'string') { modalBody.textContent = bodyContent; } else { modalBody.appendChild(bodyContent); }
-                modalConfirmBtn.textContent = confirmText;
-                modalConfirmCallback = onConfirm;
-                modalContainer.classList.remove('hidden');
-                if (confirmText.toLowerCase().includes('hapus')) { modalConfirmBtn.classList.remove('btn-primary'); modalConfirmBtn.classList.add('btn-danger'); } else { modalConfirmBtn.classList.remove('btn-danger'); modalConfirmBtn.classList.add('btn-primary'); }
-            };
-            const hideModal = () => {
-                modalContainer.classList.add('hidden');
-                modalConfirmCallback = null;
-            };
-            const formatCurrency = (amount) => new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-            const generateRandomId = () => 'pasangan-' + (Date.now().toString(36) + Math.random().toString(36).substr(2, 5));
+        // Payment method DOM elements
+        const paymentMethodEl = document.getElementById('payment-method');
+        const cashPaymentFormEl = document.getElementById('cash-payment-form');
+        const qrisPaymentFormEl = document.getElementById('qris-payment-form');
+        const qrisImageEl = document.getElementById('qris-image');
+        const qrisModalOverlay = document.getElementById('qris-modal-overlay');
+        const enlargedQrisImageEl = document.getElementById('enlarged-qris-image');
 
-            // --- Mode Selection & UI Adjustment ---
-            const setUIMode = (isReadOnly) => {
-                if (isReadOnly) {
-                    formSection.classList.add('hidden');
-                    editStartingBalanceBtn.classList.add('hidden');
-                    actionHeader.classList.add('hidden');
-                    displaySection.classList.remove('lg:col-span-2');
-                    displaySection.classList.add('lg:col-span-3');
-                } else {
-                    formSection.classList.remove('hidden');
-                    editStartingBalanceBtn.classList.remove('hidden');
-                    actionHeader.classList.remove('hidden');
-                    displaySection.classList.remove('lg:col-span-3');
-                    displaySection.classList.add('lg:col-span-2');
-                }
-            };
+        // Message Modal elements
+        const messageModalOverlay = document.getElementById('message-modal-overlay');
+        const messageModalClose = document.getElementById('message-modal-close');
+        const messageText = document.getElementById('message-text');
 
-            const enterApp = (mode, id) => {
-                currentMode = mode;
-                sessionId = id;
-                localStorage.setItem('kas-bersama-mode', mode);
-                localStorage.setItem('kas-bersama-session-id', id);
+        // Edit Menu Modal elements
+        const editModalOverlay = document.getElementById('edit-modal-overlay');
+        const editItemNameEl = document.getElementById('edit-item-name');
+        const editItemPriceEl = document.getElementById('edit-item-price');
+        const btnBatalEditEl = document.getElementById('btn-batal-edit');
+        const btnSimpanEditEl = document.getElementById('btn-simpan-edit');
 
-                modeSelectionContainer.style.display = 'none';
-                appContainer.classList.remove('hidden');
-                sessionIdEl.textContent = sessionId;
-                activeModeDisplay.textContent = mode === 'couple' ? 'Keuangan Pasangan' : 'Anonim Bersama (Hanya Lihat)';
+        // Edit Transaction Modal elements
+        const editTransactionModalOverlay = document.getElementById('edit-transaction-modal-overlay');
+        const editTxTotalEl = document.getElementById('edit-tx-total');
+        const editTxPesananEl = document.getElementById('edit-tx-pesanan');
+        const btnBatalEditTxEl = document.getElementById('btn-batal-edit-tx');
+        const btnSimpanEditTxEl = document.getElementById('btn-simpan-edit-tx');
 
-                setUIMode(mode === 'anonymous');
-                initializeFirebaseAndListeners();
-            };
 
-            const handleSwitchMode = () => {
-                if (unsubscribeTransactions) unsubscribeTransactions();
-                if (unsubscribeBalance) unsubscribeBalance();
-                localStorage.removeItem('kas-bersama-mode');
-                localStorage.removeItem('kas-bersama-session-id');
-                location.reload();
-            };
+        // Event Listeners
+        document.addEventListener('DOMContentLoaded', initialize);
+        tabButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                const category = button.dataset.category;
+                const tab = button.dataset.tab;
 
-            // --- Core App Logic ---
-            const renderUI = () => {
-                if (!sessionId) return;
-                const [filterYear, filterMonth] = monthFilter.value.split('-');
-                const monthlyTransactions = transactions.filter(trans => {
-                    const transDate = new Date(trans.date + 'T00:00:00');
-                    return transDate.getUTCFullYear() == filterYear && (transDate.getUTCMonth() + 1) == filterMonth;
-                });
-                let totalIncome = 0, totalExpense = 0;
-                const categoryTotals = {};
-                monthlyTransactions.forEach(trans => {
-                    if (trans.type === 'income') totalIncome += trans.amount;
-                    else totalExpense += trans.amount;
-                    if (!categoryTotals[trans.category]) categoryTotals[trans.category] = { income: 0, expense: 0 };
-                    categoryTotals[trans.category][trans.type] += trans.amount;
-                });
-                const finalBalance = currentStartingBalance + totalIncome - totalExpense;
-                startingBalanceEl.textContent = formatCurrency(currentStartingBalance);
-                totalIncomeEl.textContent = formatCurrency(totalIncome);
-                totalExpenseEl.textContent = formatCurrency(totalExpense);
-                finalBalanceEl.textContent = formatCurrency(finalBalance);
-                finalBalanceEl.style.color = finalBalance >= 0 ? '#16a34a' : '#dc2626';
-                renderCategorySummary(categoryTotals);
-                const sortedTransactions = monthlyTransactions.sort((a, b) => new Date(b.date) - new Date(a.date));
-                const totalPages = Math.ceil(sortedTransactions.length / itemsPerPage);
-                currentPage = Math.max(1, Math.min(currentPage, totalPages || 1));
-                const startIndex = (currentPage - 1) * itemsPerPage;
-                const paginatedTransactions = sortedTransactions.slice(startIndex, startIndex + itemsPerPage);
-                transactionList.innerHTML = '';
-                
-                const colspan = currentMode === 'anonymous' ? 4 : 5;
-                if (paginatedTransactions.length === 0) {
-                    transactionList.innerHTML = `<tr><td colspan="${colspan}" class="p-4 text-center text-gray-500">Tidak ada transaksi untuk bulan ini.</td></tr>`;
-                    paginationControls.classList.add('hidden');
-                } else {
-                    paginatedTransactions.forEach(trans => {
-                        const row = document.createElement('tr');
-                        row.className = `border-t ${trans.type === 'income' ? 'bg-green-100' : 'bg-red-100'}`;
-                        let rowHTML = `
-                            <td class="p-4 text-sm font-medium">${trans.date}</td>
-                            <td class="p-4 text-sm">${trans.description}</td>
-                            <td class="p-4 text-sm">${trans.category}</td>
-                            <td class="p-4 text-sm font-semibold text-right ${trans.type === 'income' ? 'text-green-600' : 'text-red-600'}">${formatCurrency(trans.amount)}</td>
-                        `;
-                        if (currentMode !== 'anonymous') {
-                            rowHTML += `
-                                <td class="p-4 text-center">
-                                    <button data-id="${trans.id}" class="delete-btn btn btn-danger p-2 h-8 w-8" title="Hapus Transaksi">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                    </button>
-                                </td>`;
-                        }
-                        row.innerHTML = rowHTML;
-                        transactionList.appendChild(row);
+                // Handle category tabs
+                if (category) {
+                    document.querySelectorAll('[data-category]').forEach(btn => {
+                        btn.classList.remove('border-indigo-600', 'text-indigo-600');
+                        btn.classList.add('border-transparent', 'text-gray-500');
                     });
-                    paginationControls.classList.remove('hidden');
-                }
-                pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages || 1}`;
-                prevPageBtn.disabled = currentPage === 1;
-                nextPageBtn.disabled = currentPage === totalPages || totalPages === 0;
-            };
-
-            const renderCategorySummary = (categoryTotals) => {
-                categorySummaryEl.innerHTML = '';
-                const sortedCategories = Object.keys(categoryTotals).sort();
-                if (sortedCategories.length === 0) { categorySummaryEl.innerHTML = `<p class="text-gray-500">Tidak ada data kategori.</p>`; return; }
-                sortedCategories.forEach(category => {
-                    const { income, expense } = categoryTotals[category];
-                    const categoryDiv = document.createElement('div');
-                    categoryDiv.className = 'flex justify-between items-center p-2 rounded-md even:bg-gray-50';
-                    let summaryText = `<span class="font-medium">${category}</span><div class="flex gap-2">`;
-                    if (income > 0) summaryText += `<span class="text-green-600 font-semibold">${formatCurrency(income)}</span>`;
-                    if (expense > 0) summaryText += `<span class="text-red-600 font-semibold">${formatCurrency(expense)}</span>`;
-                    summaryText += `</div>`;
-                    categoryDiv.innerHTML = summaryText;
-                    categorySummaryEl.appendChild(categoryDiv);
-                });
-            };
-
-            // --- Firestore Handlers with Read-Only Check ---
-            const handleAddTransaction = async (e) => {
-                e.preventDefault();
-                if (currentMode === 'anonymous') { showMessage('Aksi tidak diizinkan dalam mode ini.', 'error'); return; }
-                const date = document.getElementById('date').value, description = document.getElementById('description').value, category = document.getElementById('category').value, type = document.getElementById('type').value, amount = parseFloat(document.getElementById('amount').value);
-                if (!date || !description || !category || !type || isNaN(amount) || amount <= 0) { showMessage('Harap isi semua kolom.', 'error'); return; }
-                try {
-                    const transCollection = collection(db, 'artifacts', sessionId, 'public', 'data', 'transactions');
-                    await addDoc(transCollection, { date, description, category, type, amount, createdAt: new Date().toISOString() });
-                    showMessage('Transaksi berhasil ditambahkan!');
-                    transactionForm.reset();
-                    document.getElementById('date').value = new Date().toISOString().slice(0, 10);
-                } catch (error) { showMessage('Gagal menambahkan transaksi.', 'error'); }
-            };
-
-            const handleDeleteTransaction = (transactionId) => {
-                if (currentMode === 'anonymous') { showMessage('Aksi tidak diizinkan dalam mode ini.', 'error'); return; }
-                showModal('Hapus Transaksi?', 'Apakah Anda yakin ingin menghapus transaksi ini?', 'Ya, Hapus', async () => {
-                    hideModal();
-                    try {
-                        const transDocRef = doc(db, 'artifacts', sessionId, 'public', 'data', 'transactions', transactionId);
-                        await deleteDoc(transDocRef);
-                        showMessage('Transaksi berhasil dihapus.');
-                    } catch (error) { showMessage('Gagal menghapus transaksi.', 'error'); }
-                });
-            };
-
-            const handleClearAllData = async () => {
-                if (currentMode === 'anonymous') { showMessage('Aksi tidak diizinkan dalam mode ini.', 'error'); return; }
-                showModal('Hapus Semua Data?', `Ini akan menghapus semua data untuk sesi ID: ${sessionId}. Tindakan ini tidak dapat diurungkan.`, 'Ya, Hapus Semua', async () => {
-                    hideModal();
-                    try {
-                        const transCollectionRef = collection(db, 'artifacts', sessionId, 'public', 'data', 'transactions');
-                        const balanceCollectionRef = collection(db, 'artifacts', sessionId, 'public', 'data', 'balances');
-                        const batch = writeBatch(db);
-                        const [transSnapshot, balanceSnapshot] = await Promise.all([getDocs(transCollectionRef), getDocs(balanceCollectionRef)]);
-                        transSnapshot.forEach(doc => batch.delete(doc.ref));
-                        balanceSnapshot.forEach(doc => batch.delete(doc.ref));
-                        await batch.commit();
-                        showMessage('Semua data berhasil dihapus.');
-                    } catch (error) { showMessage('Gagal menghapus data.', 'error'); }
-                });
-            };
-
-            const handleEditStartingBalance = () => {
-                if (currentMode === 'anonymous') { showMessage('Aksi tidak diizinkan dalam mode ini.', 'error'); return; }
-                const body = document.createElement('div');
-                body.innerHTML = `<p class="mb-2">Masukkan saldo awal baru untuk bulan <strong>${monthFilter.value}</strong>.</p><input type="number" id="new-balance-input" class="input-field" placeholder="Contoh: 1000000" value="${currentStartingBalance}">`;
-                showModal('Ubah Saldo Awal', body, 'Simpan', async () => {
-                    const newBalance = parseFloat(document.getElementById('new-balance-input').value);
-                    if (isNaN(newBalance)) { showMessage('Nilai saldo tidak valid.', 'error'); hideModal(); return; }
-                    try {
-                        const balanceDocRef = doc(db, 'artifacts', sessionId, 'public', 'data', 'balances', monthFilter.value);
-                        await setDoc(balanceDocRef, { balance: newBalance });
-                        showMessage('Saldo awal berhasil diperbarui.');
-                        hideModal();
-                    } catch (error) { showMessage('Gagal memperbarui saldo awal.', 'error'); hideModal(); }
-                });
-            };
-
-            const setupFirestoreListeners = () => {
-                if (!sessionId) return;
-                if (unsubscribeTransactions) unsubscribeTransactions();
-                if (unsubscribeBalance) unsubscribeBalance();
-                currentPage = 1;
-                const transQuery = query(collection(db, 'artifacts', sessionId, 'public', 'data', 'transactions'));
-                unsubscribeTransactions = onSnapshot(transQuery, (snapshot) => {
-                    transactions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    renderUI();
-                }, (error) => console.error("Error listening to txs:", error));
-                const balanceDocRef = doc(db, 'artifacts', sessionId, 'public', 'data', 'balances', monthFilter.value);
-                unsubscribeBalance = onSnapshot(balanceDocRef, (doc) => {
-                    currentStartingBalance = doc.exists() ? doc.data().balance : 0;
-                    renderUI();
-                }, (error) => console.error("Error listening to balance:", error));
-            };
-            
-            // --- App Initialization ---
-            const initializeFirebaseAndListeners = async () => {
-                try {
-                    const app = initializeApp(firebaseConfig);
-                    db = getFirestore(app);
-                    auth = getAuth(app);
-                    onAuthStateChanged(auth, (user) => {
-                        formFieldset.disabled = !user;
-                        if (currentMode !== 'anonymous') {
-                           editStartingBalanceBtn.disabled = !user;
-                        }
-                        if(user) {
-                           setupFirestoreListeners();
-                        }
+                    button.classList.add('border-indigo-600', 'text-indigo-600');
+                    activeCategory = category;
+                    renderMenuItems();
+                } 
+                // Handle main content tabs
+                else if (tab) {
+                    document.querySelectorAll('[data-tab]').forEach(btn => {
+                        btn.classList.remove('border-white', 'text-white');
+                        btn.classList.add('border-transparent', 'text-indigo-200');
                     });
-                    await signInAnonymously(auth);
-                } catch (error) {
-                    showMessage('Gagal terhubung ke server.', 'error');
+                    button.classList.add('border-white', 'text-white');
+                    activeTab = tab;
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.add('hidden'));
+                    document.getElementById(`${tab}-tab-content`).classList.remove('hidden');
+                    
+                    if (activeTab === 'riwayat') {
+                        renderTransactionHistory();
+                    } else if (activeTab === 'laporan') {
+                        renderReports();
+                    } else if (activeTab === 'manajemen') {
+                        renderManageableMenu();
+                    } else if (activeTab === 'catatan') {
+                        renderNotes();
+                    }
                 }
-            };
-            
-            const main = () => {
-                // Setup event listeners
-                document.getElementById('select-anonymous-btn').addEventListener('click', () => {
-                    enterApp('anonymous', ANONYMOUS_APP_ID);
-                });
-                document.getElementById('join-couple-btn').addEventListener('click', () => {
-                    const id = document.getElementById('couple-id-input').value.trim();
-                    if (!id) { showMessage('Harap masukkan ID Pasangan.', 'error'); return; }
-                    enterApp('couple', id);
-                });
-                document.getElementById('create-couple-btn').addEventListener('click', () => {
-                    const newId = generateRandomId();
-                    const body = document.createElement('div');
-                    body.innerHTML = `<p class="mb-2">Bagikan ID ini HANYA dengan pasangan Anda:</p><input type="text" readonly value="${newId}" class="input-field bg-gray-100 text-center font-semibold text-lg"><p class="text-xs text-gray-500 mt-2">Klik 'Lanjutkan' untuk masuk.</p>`;
-                    showModal('ID Pasangan Baru Anda', body, 'Lanjutkan', () => {
-                        hideModal();
-                        enterApp('couple', newId);
-                    });
-                });
-                
-                switchModeBtn.addEventListener('click', handleSwitchMode);
-                transactionForm.addEventListener('submit', handleAddTransaction);
-                clearBtn.addEventListener('click', handleClearAllData);
-                editStartingBalanceBtn.addEventListener('click', handleEditStartingBalance);
-                monthFilter.addEventListener('change', setupFirestoreListeners);
-                transactionList.addEventListener('click', (e) => {
-                    const deleteButton = e.target.closest('.delete-btn');
-                    if (deleteButton) handleDeleteTransaction(deleteButton.getAttribute('data-id'));
-                });
-                prevPageBtn.addEventListener('click', () => { if (currentPage > 1) { currentPage--; renderUI(); } });
-                nextPageBtn.addEventListener('click', () => { currentPage++; renderUI(); });
-                modalCancelBtn.addEventListener('click', hideModal);
-                modalConfirmBtn.addEventListener('click', () => { if (modalConfirmCallback) modalConfirmCallback(); });
-                
-                // Set default dates
-                const today = new Date();
-                document.getElementById('date').value = today.toISOString().slice(0, 10);
-                monthFilter.value = today.toISOString().slice(0, 7);
-
-                // Check for saved session
-                const savedMode = localStorage.getItem('kas-bersama-mode');
-                const savedSessionId = localStorage.getItem('kas-bersama-session-id');
-                if (savedMode && savedSessionId) {
-                    enterApp(savedMode, savedSessionId);
-                } else {
-                    modeSelectionContainer.style.display = 'block';
-                    appContainer.classList.add('hidden');
-                }
-            };
-
-            main();
+            });
         });
+
+        paymentMethodEl.addEventListener('change', (e) => {
+            if (e.target.value === 'cash') {
+                cashPaymentFormEl.classList.remove('hidden');
+                qrisPaymentFormEl.classList.add('hidden');
+                formBayarEl.classList.remove('hidden');
+            } else {
+                cashPaymentFormEl.classList.add('hidden');
+                qrisPaymentFormEl.classList.remove('hidden');
+                formBayarEl.classList.remove('hidden');
+            }
+        });
+
+        btnTambahMenuEl.addEventListener('click', async () => {
+            const category = newMenuItemCategoryEl.value;
+            const name = newMenuItemNameEl.value;
+            const price = parseInt(newMenuItemPriceEl.value);
+
+            if (!name || isNaN(price) || price <= 0) {
+                showMessage("Nama menu dan harga harus diisi dengan benar.");
+                return;
+            }
+
+            try {
+                // Check if the menu item already exists
+                const menuCollectionRef = collection(db, "menu");
+                const q = query(menuCollectionRef, where("name", "==", name), where("category", "==", category));
+                const querySnapshot = await getDocs(q);
+                if (!querySnapshot.empty) {
+                    showMessage("Menu dengan nama yang sama sudah ada di kategori ini.");
+                    return;
+                }
+
+                await addDoc(menuCollectionRef, {
+                    name: name,
+                    price: price,
+                    category: category,
+                    timestamp: serverTimestamp()
+                });
+                showMessage(`Menu '${name}' berhasil ditambahkan.`);
+                newMenuItemNameEl.value = '';
+                newMenuItemPriceEl.value = '';
+            } catch (error) {
+                console.error("Error adding document: ", error);
+                showMessage("Gagal menambahkan menu. Silakan coba lagi.", true);
+            }
+        });
+
+        btnTambahPengeluaranEl.addEventListener('click', async () => {
+            const name = expenseNameEl.value;
+            const amount = parseInt(expenseAmountEl.value);
+
+            if (!name || isNaN(amount) || amount <= 0) {
+                showMessage("Nama dan jumlah pengeluaran harus diisi dengan benar.");
+                return;
+            }
+            try {
+                const expensesRef = collection(db, `users/${currentUserId}/expenses`);
+                await addDoc(expensesRef, {
+                    name: name,
+                    amount: amount,
+                    timestamp: serverTimestamp()
+                });
+                showMessage(`Pengeluaran '${name}' berhasil ditambahkan.`);
+                expenseNameEl.value = '';
+                expenseAmountEl.value = '';
+            } catch (error) {
+                console.error("Error adding expense:", error);
+                showMessage("Gagal menambahkan pengeluaran.", true);
+            }
+        });
+
+        btnTambahCatatanEl.addEventListener('click', async () => {
+            const noteText = noteTextEl.value;
+            if (!noteText.trim()) {
+                showMessage("Catatan tidak boleh kosong.");
+                return;
+            }
+            try {
+                const notesRef = collection(db, `users/${currentUserId}/notes`);
+                await addDoc(notesRef, {
+                    text: noteText,
+                    timestamp: serverTimestamp()
+                });
+                showMessage("Catatan berhasil disimpan.");
+                noteTextEl.value = '';
+            } catch (error) {
+                console.error("Error adding note:", error);
+                showMessage("Gagal menyimpan catatan.", true);
+            }
+        });
+        
+        btnBayarEl.addEventListener('click', processPayment);
+        btnTransaksiBaruEl.addEventListener('click', resetTransaksi);
+        messageModalClose.addEventListener('click', () => {
+            messageModalOverlay.classList.add('hidden');
+        });
+
+        btnBatalEditEl.addEventListener('click', () => {
+            editModalOverlay.classList.add('hidden');
+        });
+
+        btnSimpanEditEl.addEventListener('click', async () => {
+            const newName = editItemNameEl.value;
+            const newPrice = parseInt(editItemPriceEl.value);
+
+            if (!newName || isNaN(newPrice) || newPrice <= 0) {
+                showMessage("Nama menu dan harga harus diisi dengan benar.");
+                return;
+            }
+
+            if (currentEditDocId) {
+                try {
+                    await updateDoc(doc(db, "menu", currentEditDocId), {
+                        name: newName,
+                        price: newPrice
+                    });
+                    showMessage("Menu berhasil diperbarui.");
+                    editModalOverlay.classList.add('hidden');
+                } catch (error) {
+                    console.error("Error updating document: ", error);
+                    showMessage("Gagal memperbarui menu. Silakan coba lagi.", true);
+                }
+            }
+        });
+
+        btnBatalEditTxEl.addEventListener('click', () => {
+            editTransactionModalOverlay.classList.add('hidden');
+        });
+
+        btnSimpanEditTxEl.addEventListener('click', async () => {
+            const newTotal = parseInt(editTxTotalEl.value);
+            const newPesanan = editTxPesananEl.value;
+
+            if (isNaN(newTotal) || newTotal <= 0 || !newPesanan) {
+                showMessage("Data transaksi tidak valid.", true);
+                return;
+            }
+
+            try {
+                // Validate if pesanan is a valid JSON string
+                JSON.parse(newPesanan);
+                
+                if (currentEditTxDocId) {
+                    await updateDoc(doc(db, "transactions", currentEditTxDocId), {
+                        total: newTotal,
+                        pesanan: newPesanan
+                    });
+                    showMessage("Transaksi berhasil diperbarui.");
+                    editTransactionModalOverlay.classList.add('hidden');
+                }
+            } catch (error) {
+                console.error("Error updating transaction:", error);
+                showMessage("Gagal memperbarui transaksi. Pastikan format JSON benar.", true);
+            }
+        });
+
+        window.openQRISModal = function() {
+            const total = parseInt(cartTotalEl.textContent.replace('Rp ', '').replace(/\./g, ''));
+            const imageUrl = `https://placehold.co/800x800/292B4F/FFF?text=QRIS+%20Rp${total.toLocaleString('id-ID')}`;
+            enlargedQrisImageEl.src = imageUrl;
+            qrisModalOverlay.classList.remove('hidden');
+        }
+
+        window.closeQRISModal = function() {
+            qrisModalOverlay.classList.add('hidden');
+        }
+
+
+        async function initialize() {
+            onAuthStateChanged(auth, async (user) => {
+                if (user) {
+                    currentUserId = user.uid;
+                    console.log("Pengguna terautentikasi:", currentUserId);
+                } else {
+                    currentUserId = crypto.randomUUID();
+                    console.log("Pengguna anonim:", currentUserId);
+                    await signInAnonymously(auth);
+                }
+                authStatusEl.textContent = `Masuk sebagai: ${currentUserId}`;
+
+                // Listeners for public data
+                onSnapshot(collection(db, "menu"), (snapshot) => {
+                    editableMenuItems = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                    renderMenuItems();
+                    renderManageableMenu();
+                });
+
+                onSnapshot(collection(db, "transactions"), (snapshot) => {
+                    transactions = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp?.toDate()
+                    }));
+                    transactions.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+                    if (activeTab === 'riwayat') {
+                        renderTransactionHistory();
+                    }
+                });
+
+                // Listeners for user-specific data
+                const expensesRef = collection(db, `users/${currentUserId}/expenses`);
+                onSnapshot(expensesRef, (snapshot) => {
+                    expenses = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp?.toDate()
+                    }));
+                    expenses.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+                    if (activeTab === 'laporan') {
+                        renderReports();
+                    }
+                });
+
+                const notesRef = collection(db, `users/${currentUserId}/notes`);
+                onSnapshot(notesRef, (snapshot) => {
+                    notes = snapshot.docs.map(doc => ({
+                        id: doc.id,
+                        ...doc.data(),
+                        timestamp: doc.data().timestamp?.toDate()
+                    }));
+                    notes.sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0));
+                    if (activeTab === 'catatan') {
+                        renderNotes();
+                    }
+                });
+
+
+                document.getElementById('tab-makanan').click(); // Default to Makanan tab
+                document.getElementById('tab-kasir').click(); // Default to Kasir tab
+            });
+        }
+
+        function showMessage(message, isError = false) {
+            messageText.textContent = message;
+            messageText.classList.toggle('text-red-600', isError);
+            messageText.classList.toggle('text-gray-800', !isError);
+            messageModalOverlay.classList.remove('hidden');
+        }
+
+        window.openEditModal = function(docId, name, price) {
+            currentEditDocId = docId;
+            editItemNameEl.value = name;
+            editItemPriceEl.value = price;
+            editModalOverlay.classList.remove('hidden');
+        }
+
+        window.openEditTransactionModal = function(docId) {
+            currentEditTxDocId = docId;
+            const transaction = transactions.find(tx => tx.id === docId);
+            if (transaction) {
+                editTxTotalEl.value = transaction.total;
+                editTxPesananEl.value = transaction.pesanan;
+                editTransactionModalOverlay.classList.remove('hidden');
+            } else {
+                showMessage("Transaksi tidak ditemukan.", true);
+            }
+        }
+
+        window.deleteTransaction = async function(docId) {
+            try {
+                await deleteDoc(doc(db, "transactions", docId));
+                showMessage("Transaksi berhasil dihapus.");
+            } catch (error) {
+                console.error("Error removing transaction:", error);
+                showMessage("Gagal menghapus transaksi. Silakan coba lagi.", true);
+            }
+        }
+
+        function renderMenuItems() {
+            menuItemsEl.innerHTML = '';
+            const currentMenu = editableMenuItems.filter(item => item.category === activeCategory);
+            
+            if (currentMenu.length === 0) {
+                menuItemsEl.innerHTML = `<p class="text-gray-500 col-span-full text-center py-8">Menu di kategori ini masih kosong.</p>`;
+                return;
+            }
+            
+            currentMenu.forEach(item => {
+                const card = document.createElement('div');
+                card.className = "bg-white p-4 rounded-lg shadow cursor-pointer transform hover:scale-105 transition-transform duration-200 text-center";
+                card.innerHTML = `
+                    <p class="font-semibold text-gray-800">${item.name}</p>
+                    <p class="text-sm text-gray-500">Rp ${item.price.toLocaleString('id-ID')}</p>
+                `;
+                card.addEventListener('click', () => tambahKeKeranjang(item.name, item.price));
+                menuItemsEl.appendChild(card);
+            });
+        }
+
+        function renderManageableMenu() {
+            manajemenMenuListEl.innerHTML = '';
+            
+            if (editableMenuItems.length === 0) {
+                manajemenMenuListEl.innerHTML = `<p class="text-white text-center py-4">Tidak ada menu yang terdaftar.</p>`;
+                return;
+            }
+            
+            const categories = editableMenuItems.reduce((acc, item) => {
+                acc[item.category] = acc[item.category] || [];
+                acc[item.category].push(item);
+                return acc;
+            }, {});
+
+            for (const category in categories) {
+                const categoryTitle = document.createElement('h3');
+                categoryTitle.className = "text-lg font-bold mt-4 mb-2 text-white capitalize";
+                categoryTitle.textContent = category;
+                manajemenMenuListEl.appendChild(categoryTitle);
+
+                categories[category].forEach(item => {
+                    const itemEl = document.createElement('div');
+                    itemEl.className = "flex justify-between items-center bg-white bg-opacity-10 p-2 rounded-lg mb-2 cursor-pointer";
+                    itemEl.innerHTML = `
+                        <span class="text-sm text-white">${item.name} - Rp ${item.price.toLocaleString('id-ID')}</span>
+                        <button class="bg-red-500 text-white text-xs px-2 py-1 rounded-full hover:bg-red-600 transition-colors duration-200" data-doc-id="${item.id}" data-item-name="${item.name}" data-item-category="${item.category}" onclick="event.stopPropagation(); deleteMenuItem(this.dataset.docId, this.dataset.itemName);">Hapus</button>
+                    `;
+                    itemEl.addEventListener('click', () => openEditModal(item.id, item.name, item.price));
+                    manajemenMenuListEl.appendChild(itemEl);
+                });
+            }
+        }
+        
+        window.deleteMenuItem = async function(docId, itemName) {
+            try {
+                await deleteDoc(doc(db, "menu", docId));
+                showMessage(`Menu '${itemName}' berhasil dihapus.`);
+            } catch (error) {
+                console.error("Error removing document: ", error);
+                showMessage("Gagal menghapus menu. Silakan coba lagi.", true);
+            }
+        }
+
+
+        window.tambahKeKeranjang = function(item, price) {
+            if (cart[item]) {
+                cart[item].jumlah += 1;
+            } else {
+                cart[item] = { harga: price, jumlah: 1 };
+            }
+            renderCart();
+        }
+        
+        window.kurangiDariKeranjang = function(item) {
+            if (cart[item] && cart[item].jumlah > 1) {
+                cart[item].jumlah -= 1;
+            } else {
+                delete cart[item];
+            }
+            renderCart();
+        }
+
+        function renderCart() {
+            cartItemsEl.innerHTML = '';
+            let total = 0;
+            if (Object.keys(cart).length === 0) {
+                cartItemsEl.innerHTML = `<p class="text-sm text-center text-gray-400">Keranjang kosong.</p>`;
+            } else {
+                for (const item in cart) {
+                    const { harga, jumlah } = cart[item];
+                    const itemTotal = harga * jumlah;
+                    total += itemTotal;
+                    
+                    const cartItemEl = document.createElement('div');
+                    cartItemEl.className = "flex justify-between items-center py-2 border-b border-gray-200 last:border-b-0";
+                    cartItemEl.innerHTML = `
+                        <div class="flex-1">
+                            <p class="font-medium text-gray-700">${item}</p>
+                            <p class="text-sm text-gray-500">Rp ${harga.toLocaleString('id-ID')} x ${jumlah}</p>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="kurangiDariKeranjang('${item}')" class="text-red-500 hover:text-red-700 font-bold text-lg leading-none">-</button>
+                            <span class="font-semibold text-gray-800 w-8 text-center">Rp ${(itemTotal).toLocaleString('id-ID')}</span>
+                            <button onclick="tambahKeKeranjang('${item}', ${harga})" class="text-green-500 hover:text-green-700 font-bold text-lg leading-none">+</button>
+                        </div>
+                    `;
+                    cartItemsEl.appendChild(cartItemEl);
+                }
+            }
+            cartTotalEl.textContent = `Rp ${total.toLocaleString('id-ID')}`;
+        }
+
+        async function processPayment() {
+            const total = parseInt(cartTotalEl.textContent.replace('Rp ', '').replace(/\./g, ''));
+            const paymentMethod = paymentMethodEl.value;
+
+            if (Object.keys(cart).length === 0) {
+                showMessage("Keranjang belanja masih kosong.");
+                return;
+            }
+
+            if (paymentMethod === 'cash') {
+                const bayar = parseInt(inputBayarEl.value);
+                if (isNaN(bayar) || bayar < total) {
+                    showMessage("Jumlah pembayaran tidak valid atau kurang.");
+                    return;
+                }
+                const kembalian = bayar - total;
+                kembalianAmountEl.textContent = `Rp ${kembalian.toLocaleString('id-ID')}`;
+                saveTransaction(total, bayar, kembalian, 'Tunai');
+            } else if (paymentMethod === 'qris') {
+                qrisImageEl.src = `https://placehold.co/400x400/292B4F/FFF?text=QRIS+%20Rp${total.toLocaleString('id-ID')}`;
+                kembalianAmountEl.textContent = `Rp 0`; // QRIS has no change
+                saveTransaction(total, total, 0, 'QRIS');
+            }
+        }
+
+        async function saveTransaction(total, bayar, kembalian, method) {
+            try {
+                const transactionsCollectionRef = collection(db, "transactions");
+                await addDoc(transactionsCollectionRef, {
+                    pesanan: JSON.stringify(cart),
+                    total: total,
+                    bayar: bayar,
+                    kembalian: kembalian,
+                    metode: method,
+                    timestamp: serverTimestamp()
+                });
+                showMessage("Transaksi berhasil disimpan!");
+            } catch (error) {
+                console.error("Error saving transaction: ", error);
+                showMessage("Gagal menyimpan transaksi.", true);
+            }
+            
+            formBayarEl.classList.add('hidden');
+            kembalianInfoEl.classList.remove('hidden');
+        }
+
+        function resetTransaksi() {
+            cart = {};
+            renderCart();
+            inputBayarEl.value = '';
+            formBayarEl.classList.remove('hidden');
+            kembalianInfoEl.classList.add('hidden');
+            paymentMethodEl.value = 'cash';
+            cashPaymentFormEl.classList.remove('hidden');
+            qrisPaymentFormEl.classList.add('hidden');
+        }
+
+        
+        function renderTransactionHistory() {
+            riwayatTabContentEl.innerHTML = '';
+            if (transactions.length === 0) {
+                riwayatTabContentEl.innerHTML = `<p class="text-indigo-200 text-center py-4">Belum ada riwayat transaksi.</p>`;
+                return;
+            }
+            
+            transactions.forEach((tx, index) => {
+                const txEl = document.createElement('div');
+                txEl.className = "bg-white bg-opacity-10 p-3 rounded-lg mb-2";
+                
+                let detailPesanan = '';
+                try {
+                    const pesanan = JSON.parse(tx.pesanan);
+                    for (const item in pesanan) {
+                        const { harga, jumlah } = pesanan[item];
+                        detailPesanan += `<p class="text-xs text-indigo-200">- ${item} (${jumlah}x): Rp ${(harga * jumlah).toLocaleString('id-ID')}</p>`;
+                    }
+                } catch (e) {
+                    detailPesanan = `<p class="text-xs text-red-300">Data pesanan rusak.</p>`;
+                }
+
+                txEl.innerHTML = `
+                    <p class="text-sm font-semibold">Transaksi #${transactions.length - index}</p>
+                    <p class="text-xs text-indigo-300">${tx.timestamp ? tx.timestamp.toLocaleString('id-ID') : 'Tanggal tidak tersedia'}</p>
+                    <p class="text-lg font-bold my-1">Total: Rp ${tx.total.toLocaleString('id-ID')}</p>
+                    <p class="text-sm text-indigo-300 mt-1">Metode: <span class="font-semibold">${tx.metode}</span></p>
+                    <div class="mt-2 text-sm">
+                        <p class="font-semibold">Detail Pesanan:</p>
+                        ${detailPesanan}
+                    </div>
+                    <div class="flex justify-end space-x-2 mt-2">
+                        <button onclick="openEditTransactionModal('${tx.id}')" class="bg-yellow-500 text-white text-xs px-3 py-1 rounded-full hover:bg-yellow-600">Edit</button>
+                        <button onclick="deleteTransaction('${tx.id}')" class="bg-red-500 text-white text-xs px-3 py-1 rounded-full hover:bg-red-600">Hapus</button>
+                    </div>
+                `;
+                riwayatTabContentEl.appendChild(txEl);
+            });
+        }
+
+        function renderReports() {
+            laporanListEl.innerHTML = '';
+            if (expenses.length === 0) {
+                laporanListEl.innerHTML = `<p class="text-white text-center py-4">Belum ada data pengeluaran.</p>`;
+                return;
+            }
+
+            let totalPengeluaran = 0;
+            expenses.forEach(expense => {
+                totalPengeluaran += expense.amount;
+                const expenseEl = document.createElement('div');
+                expenseEl.className = "flex justify-between items-center bg-white bg-opacity-10 p-2 rounded-lg mb-2";
+                expenseEl.innerHTML = `
+                    <span class="text-sm text-white">${expense.name}</span>
+                    <span class="text-sm text-white">Rp ${expense.amount.toLocaleString('id-ID')}</span>
+                `;
+                laporanListEl.appendChild(expenseEl);
+            });
+            
+            const totalEl = document.createElement('div');
+            totalEl.className = "flex justify-between items-center bg-white text-indigo-600 p-3 rounded-lg font-bold mt-4";
+            totalEl.innerHTML = `
+                <span>TOTAL PENGELUARAN:</span>
+                <span>Rp ${totalPengeluaran.toLocaleString('id-ID')}</span>
+            `;
+            laporanListEl.appendChild(totalEl);
+        }
+
+        function renderNotes() {
+            notesListEl.innerHTML = '';
+            if (notes.length === 0) {
+                notesListEl.innerHTML = `<p class="text-white text-center py-4">Belum ada catatan.</p>`;
+                return;
+            }
+            notes.forEach(note => {
+                const noteEl = document.createElement('div');
+                noteEl.className = "bg-white bg-opacity-10 p-3 rounded-lg mb-2";
+                noteEl.innerHTML = `
+                    <p class="text-sm text-white mb-2">${note.text}</p>
+                    <p class="text-xs text-indigo-300">${note.timestamp ? note.timestamp.toLocaleString('id-ID') : 'Tanggal tidak tersedia'}</p>
+                `;
+                notesListEl.appendChild(noteEl);
+            });
+        }
     </script>
 </body>
 </html>
