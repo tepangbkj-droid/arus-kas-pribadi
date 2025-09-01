@@ -32,6 +32,21 @@
             width: 90%;
             text-align: center;
         }
+        /* Style for item confirmation and quantity badge */
+        .item-card {
+            position: relative;
+        }
+        .item-quantity-badge {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background-color: #4f46e5;
+            color: white;
+            border-radius: 9999px;
+            padding: 2px 8px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4 md:p-8">
@@ -677,12 +692,39 @@
             
             filteredMenu.forEach(item => {
                 const card = document.createElement('div');
-                card.className = "bg-white p-4 rounded-lg shadow cursor-pointer transform hover:scale-105 transition-transform duration-200 text-center";
+                card.className = "item-card bg-white p-4 rounded-lg shadow cursor-pointer transform hover:scale-105 transition-transform duration-200 text-center";
                 let displayPrice = item.price ? `Rp ${item.price.toLocaleString('id-ID')}` : 'Pilih Varian';
                 card.innerHTML = `
                     <p class="font-semibold text-gray-800">${item.name}</p>
                     <p class="text-sm text-gray-500">${displayPrice}</p>
                 `;
+
+                // Add a quantity badge
+                const quantityBadge = document.createElement('span');
+                quantityBadge.className = 'item-quantity-badge hidden';
+                card.appendChild(quantityBadge);
+                
+                // Check if item exists in cart and update badge
+                let totalQuantity = 0;
+                if (item.variants) {
+                    item.variants.forEach(variant => {
+                        const cartKey = `${item.name} (${variant.name})`;
+                        if (cart[cartKey]) {
+                            totalQuantity += cart[cartKey].jumlah;
+                        }
+                    });
+                } else {
+                    const cartKey = item.name;
+                    if (cart[cartKey]) {
+                        totalQuantity = cart[cartKey].jumlah;
+                    }
+                }
+
+                if (totalQuantity > 0) {
+                    quantityBadge.textContent = totalQuantity;
+                    quantityBadge.classList.remove('hidden');
+                }
+
                 card.addEventListener('click', () => {
                     if (item.variants) {
                         openVariantModal(item);
@@ -762,6 +804,7 @@
                 cart[cartKey] = { harga: price, jumlah: 1 };
             }
             renderCart();
+            renderMenuItems();
         }
         
         window.kurangiDariKeranjang = function(item) {
@@ -771,6 +814,7 @@
                 delete cart[item];
             }
             renderCart();
+            renderMenuItems();
         }
 
         function renderCart() {
@@ -852,6 +896,7 @@
         function resetTransaksi() {
             cart = {};
             renderCart();
+            renderMenuItems();
             inputBayarEl.value = '';
             formBayarEl.classList.remove('hidden');
             kembalianInfoEl.classList.add('hidden');
